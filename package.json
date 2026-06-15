@@ -1,0 +1,17 @@
+{
+  "name": "valora-backend",
+  "version": "1.0.0",
+  "description": "Valora V1 backend (users, packs, arena matchmaking, treasury, leaderboard)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "cors": "^2.8.6"
+  }
+}
