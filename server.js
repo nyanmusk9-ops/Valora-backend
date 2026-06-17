@@ -25,16 +25,18 @@ const pool = new Pool({
    CONFIG ÉCONOMIE / JEU (source de vérité serveur)
    =========================================================================== */
 const CHAMPIONS = {
-  pyron:    { name: "Pyron",    element: "fire" },
-  florabel: { name: "Florabel", element: "leaf" },
-  aquon:    { name: "Aquon",    element: "water" },
-  voltik:   { name: "Voltik",   element: "electric" },
-  frostle:  { name: "Frostle",  element: "ice" },
-  umbron:   { name: "Umbron",   element: "shadow" }
+  pyron:    { name: "Pyron",    element: "fire",     rarity: "common" },
+  florabel: { name: "Florabel", element: "leaf",     rarity: "common" },
+  tidus:    { name: "Tidus",    element: "water",    rarity: "rare" },
+  voltik:   { name: "Voltik",   element: "electric", rarity: "rare" },
+  frostle:  { name: "Frostle",  element: "ice",      rarity: "epic" },
+  umbron:   { name: "Umbron",   element: "shadow",   rarity: "legendary" }
 };
 const CHAMP_IDS = Object.keys(CHAMPIONS);
 const STARTERS = ["pyron", "florabel", "frostle"];     // offerts à la création, soulbound
-const STARTER_RARITY = "rare";
+// la rareté est une propriété du champion (comme dans le front) -> groupes par rareté
+const BY_RARITY = { common: [], rare: [], epic: [], legendary: [] };
+for (const _id of CHAMP_IDS) BY_RARITY[CHAMPIONS[_id].rarity].push(_id);
 
 const POWER_BY_RARITY    = { common: 25, rare: 50, epic: 75, legendary: 100 };
 const DISMANTLE_COINS    = { common: 50, rare: 120, epic: 300, legendary: 700 };
@@ -125,23 +127,23 @@ INSERT INTO treasury (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
    =========================================================================== */
 function newId(p) { return `${p}_${crypto.randomUUID()}`; }
 function sanitizeName(n) { return (String(n || "Nova").replace(/[<>&"']/g, "").trim().slice(0, 14) || "Nova"); }
-function randomChampId() { return CHAMP_IDS[Math.floor(Math.random() * CHAMP_IDS.length)]; }
+function randomChampOfRarity(r) { const arr = (BY_RARITY[r] && BY_RARITY[r].length) ? BY_RARITY[r] : CHAMP_IDS; return arr[Math.floor(Math.random() * arr.length)]; }
 function randomRarity(w) {
   const t = Object.values(w).reduce((a, b) => a + b, 0);
   let r = Math.random() * t;
   for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; }
   return "common";
 }
-function newCard(champId, rarity, soulbound) {
+function newCard(champId, soulbound) {
   const c = CHAMPIONS[champId];
   return {
     id: newId("card"), champion: champId, element: c.element,
-    rarity, power: POWER_BY_RARITY[rarity] || 0, soulbound: !!soulbound
+    rarity: c.rarity, power: POWER_BY_RARITY[c.rarity] || 0, soulbound: !!soulbound
   };
 }
 function generatePack(type) {
-  const cards = [newCard(randomChampId(), PACK_GUARANTEE[type], false)];
-  while (cards.length < PACK_SIZE) cards.push(newCard(randomChampId(), randomRarity(PACK_WEIGHTS[type]), false));
+  const cards = [newCard(randomChampOfRarity(PACK_GUARANTEE[type]), false)];
+  while (cards.length < PACK_SIZE) cards.push(newCard(randomChampOfRarity(randomRarity(PACK_WEIGHTS[type])), false));
   return cards;
 }
 function userJson(r) {
@@ -237,7 +239,7 @@ app.post("/api/users", async (req, res) => {
       [id, username, now]);
     const starterIds = [];
     for (const champ of STARTERS) {
-      const c = newCard(champ, STARTER_RARITY, true); // soulbound
+      const c = newCard(champ, true); // soulbound (rareté = celle du champion)
       await client.query(
         "INSERT INTO user_cards(id,user_id,champion,element,rarity,power,soulbound,created_at) VALUES($1,$2,$3,$4,$5,$6,true,$7)",
         [c.id, id, c.champion, c.element, c.rarity, c.power, now]);
