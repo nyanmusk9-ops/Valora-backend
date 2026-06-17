@@ -558,7 +558,7 @@ app.post("/api/matches/:matchId/finish", async (req, res) => {
       await client.query("UPDATE users SET locked_coins=GREATEST(0,locked_coins-$1), coins=coins+$2, wins=wins+1, elo=$3 WHERE id=$4", [entry, pot, newWinElo, winnerId]);
       await client.query("UPDATE users SET locked_coins=GREATEST(0,locked_coins-$1), losses=losses+1, elo=$2 WHERE id=$3", [entry, newLoseElo, loserId]);
     } else {
-      await client.query("UPDATE users SET wins=wins+1, elo=$1 WHERE id=$2", [newWinElo, winnerId]);
+      await client.query("UPDATE users SET wins=wins+1, tickets=tickets+1, elo=$1 WHERE id=$2", [newWinElo, winnerId]); // casual: +1 ticket, pas d'ELO, pas de coins
       await client.query("UPDATE users SET losses=losses+1, elo=$1 WHERE id=$2", [newLoseElo, loserId]);
     }
     await client.query("UPDATE matches SET status='finished', winner_id=$1, loser_id=$2, prize_coins=$3, finished_at=$4 WHERE id=$5", [winnerId, loserId, pot, Date.now(), matchId]);
